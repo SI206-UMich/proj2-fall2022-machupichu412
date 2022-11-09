@@ -1,3 +1,8 @@
+# Your name: Matthew Yeh
+# Your student id: 77783379
+# Your email: mattyeh@umich.edu
+# List who you have worked with on this project: Brian Cho
+
 from xml.sax import parseString
 from bs4 import BeautifulSoup
 import re
