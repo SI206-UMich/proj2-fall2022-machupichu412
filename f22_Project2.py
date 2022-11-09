@@ -25,7 +25,22 @@ def get_listings_from_search_results(html_file):
         ('Loft in Mission District', 210, '1944564'),  # example
     ]
     """
-    pass
+    file_obj = open(html_file)
+    soup = BeautifulSoup(file_obj, 'html.parser')
+    file_obj.close()
+    listingInfo = []
+    listings = soup.find_all('div', class_="lwy0wad l1tup9az dir dir-ltr")
+    for listing in listings:
+        titleTag = listing.find('div', class_="t1jojoys dir dir-ltr")
+        title = titleTag.text
+        costTag = listing.find('span', class_="_tyxjp1")
+        cost = re.findall("^\$(\d+)", costTag.text)[0]
+        cost = int(cost)
+        listing = listing.find('div', class_="t1jojoys dir dir-ltr").get('id', None)
+        listingID = re.findall("title_(\d+)", listing)[0]
+        listingInfo.append((title, cost, listingID))
+    return listingInfo
+
 
 
 def get_listing_information(listing_id):
@@ -52,13 +67,33 @@ def get_listing_information(listing_id):
         number of bedrooms
     )
     """
-    pass
+    html_file = "html_files/listing_" + listing_id + ".html"
+    file_obj = open(html_file)
+    soup = BeautifulSoup(file_obj, 'html.parser')
+    policyNumParent = soup.find('ul', class_="fhhmddr dir dir-ltr")
+    policyNumTag = policyNumParent.find('span', class_="ll4r2nl dir dir-ltr")
+    policyNum = policyNumTag.text
+    placeTypeTag = soup.find('h2', class_="_14i3z6h")
+    placeTypeText = placeTypeTag.text
+    if re.search("Private", placeTypeText):
+        placeType = "Private Room"
+    elif re.search("Shared", placeTypeText):
+        placeType = "Shared Room"    
+    else: 
+        placeType = "Entire Room"
+    bedroomText = soup.body.findAll(text=re.compile('^(\d+).*bedrooms?$'))
+    if len(bedroomText) >= 1:
+        numBedrooms = int(re.findall("^(\d+).*bedrooms?", bedroomText[0])[0])
+    if len(bedroomText) == 0:
+        numBedrooms = 1
+    file_obj.close()
+    return ((policyNum, placeType, numBedrooms))
 
 
 def get_detailed_listing_database(html_file):
     """
     Write a function that calls the above two functions in order to return
-    the complete listing information using the functions you’ve created.
+    the complete listing information using the functions you've created.
     This function takes in a variable representing the location of the search results html file.
     The return value should be in this format:
 
@@ -69,7 +104,16 @@ def get_detailed_listing_database(html_file):
         ...
     ]
     """
-    pass
+    detailed_list = []
+    search_list = get_listings_from_search_results(html_file)
+
+    for tup in search_list:
+        listing_id = tup[2]
+        listing_info = get_listing_information(listing_id)
+        combined_tup = tup + listing_info
+        detailed_list.append(combined_tup)
+    
+    return detailed_list
 
 
 def write_csv(data, filename):
@@ -94,7 +138,13 @@ def write_csv(data, filename):
 
     This function should not return anything.
     """
-    pass
+    sorted_list = sorted(data, key=lambda t: t[1])
+
+    with open(filename, 'w') as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerow(['Listing Title', 'Cost', 'Listing ID', 'Policy Number', 'Place Type', 'Number of Bedrooms'])
+        for row in sorted_list:
+            csv_writer.writerow(row)
 
 
 def check_policy_numbers(data):
@@ -133,7 +183,12 @@ def extra_credit(listing_id):
     gone over their 90 day limit, else return True, indicating the lister has
     never gone over their limit.
     """
-    pass
+    html_file = "html_files/listing_" + listing_id + ".html"
+    file_obj = open(html_file)
+    soup = BeautifulSoup(file_obj, 'html.parser')
+    reviewsDiv = soup.find(div, class_="pdp-reviews-modal-scrollable-panel")
+
+
 
 
 class TestCases(unittest.TestCase):
@@ -147,11 +202,12 @@ class TestCases(unittest.TestCase):
         # check that the variable you saved after calling the function is a list
         self.assertEqual(type(listings), list)
         # check that each item in the list is a tuple
-
+        for i in range(len(listings)):
+            self.assertEqual(type(listings[i]), tuple)
         # check that the first title, cost, and listing id tuple is correct (open the search results html and find it)
-
+        self.assertEqual(listings[0], ('Loft in Mission District', 210, '1944564'))
         # check that the last title is correct (open the search results html and find it)
-        pass
+        self.assertEqual(listings[19][0], "Guest suite in Mission District")
 
     def test_get_listing_information(self):
         html_list = ["1623609",
@@ -174,12 +230,12 @@ class TestCases(unittest.TestCase):
             # check that the third element in the tuple is an int
             self.assertEqual(type(listing_information[2]), int)
         # check that the first listing in the html_list has policy number 'STR-0001541'
-
+        self.assertEqual(listing_informations[0][0], 'STR-0001541')
         # check that the last listing in the html_list is a "Private Room"
-
+        self.assertEqual(listing_informations[4][1], 'Private Room')
         # check that the third listing has one bedroom
-
-        pass
+        self.assertEqual(listing_informations[2][2], 1)
+        
 
     def test_get_detailed_listing_database(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
