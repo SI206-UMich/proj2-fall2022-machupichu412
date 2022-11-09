@@ -74,7 +74,7 @@ def get_listing_information(listing_id):
     policyNumTag = policyNumParent.find('span', class_="ll4r2nl dir dir-ltr")
     if re.search("[p|P]ending", policyNumTag.text):
         policyNum = "Pending"
-    elif re.search("20\d{2}\-00\d{4}STR|STR\-000\d{4}", policyNumTag.text):
+    elif re.search("\d{6,7}", policyNumTag.text):
         policyNum = policyNumTag.text
     else:
         policyNum = "Exempt"
@@ -172,15 +172,15 @@ def check_policy_numbers(data):
 
     """
     pattern = "20\d{2}\-00\d{4}STR|STR\-000\d{4}"
-    valid_list = []
+    noExemptAndPending = []
     invalid_list = []
-
     for listing in data:
-        match = re.findall(pattern, listing[3])
-        valid_list.append(match)
-    
-    for listing in data:
-        if listing[3] not in valid_list:
+        policyNum = listing[3]
+        if ((policyNum != "Pending") and (policyNum != "Exempt")):
+            print(listing[2])
+            noExemptAndPending.append(listing)
+    for listing in noExemptAndPending:
+        if not re.search(pattern, listing[3]):
             invalid_list.append(listing[2])
             
     return invalid_list
@@ -215,14 +215,6 @@ def extra_credit(listing_id):
             return False
     return True
 
-
-def main():
-    print(extra_credit("1944564"))
-    print(extra_credit("16204265"))
-    detailed_database = get_detailed_listing_database("html_files/mission_district_search_results.html")
-    print(check_policy_numbers(detailed_database))
-
-main()
 
 
 class TestCases(unittest.TestCase):
@@ -284,7 +276,6 @@ class TestCases(unittest.TestCase):
             self.assertEqual(len(item), 6)
         # check that the first tuple is made up of the following:
         # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
-        '2022-004088STR', 'Entire Room', 1
         self.assertEqual(detailed_database[0], ('Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1))
         # check that the last tuple is made up of the following:
         # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
@@ -321,11 +312,10 @@ class TestCases(unittest.TestCase):
         invalid_listings = check_policy_numbers(detailed_database)
         # check that the return value is a list
         self.assertEqual(type(invalid_listings), list)
-        # check that there is exactly one element in the string
-        for listing in invalid_listings:
-            self.assertEqual(len(listing), 1)
-            # check that the element in the list is a string
-            self.assertEqual(type(listing), str)
+        # check that there is exactly one element in the list
+        self.assertEqual(len(invalid_listings), 1)
+        # check that the element in the list is a string
+        self.assertEqual(type(invalid_listings[0]), str)
         # check that the first element in the list is '16204265'
         self.assertEqual(invalid_listings[0], '16204265')
 
